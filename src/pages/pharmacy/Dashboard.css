@@ -1,0 +1,214 @@
+/* ===== Card ===== */
+.dash-page {
+  max-width: 520px;
+  margin: 36px auto 64px;
+  padding: 28px;
+  background: #ffffff;
+  border: 1px solid #e8eaee;
+  border-radius: 14px;
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 8px 24px rgba(16, 24, 40, 0.05);
+}
+
+/* ===== Header ===== */
+.dash-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 18px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f0f1f4;
+}
+
+.dash-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #ecfdf5;
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+.dash-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.dash-subtitle {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* ===== Sections ===== */
+.dash-section {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #b0b6c0;
+  margin: 22px 0 10px;
+}
+
+.dash-section:first-of-type {
+  margin-top: 0;
+}
+
+/* ===== Messages ===== */
+.dash-message {
+  padding: 10px 13px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  font-size: 13.5px;
+  font-weight: 600;
+  margin: 0 0 14px;
+}
+
+.dash-error {
+  padding: 10px 13px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 13.5px;
+  font-weight: 600;
+  margin: 0 0 14px;
+}
+
+/* ===== Fields ===== */
+.dash-field {
+  margin-bottom: 14px;
+}
+
+.dash-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 5px;
+}
+
+.dash-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d6d9e0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  background: #ffffff;
+  transition:
+    border-color 0.12s,
+    box-shadow 0.12s;
+}
+
+.dash-input::placeholder {
+  color: #b3b9c4;
+}
+
+.dash-input:focus {
+  outline: none;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+/* ===== Switches ===== */
+.dash-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 2px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
+  color: #374151;
+}
+
+.dash-switch-row:last-of-type {
+  border-bottom: none;
+}
+
+.dash-switch-row.on {
+  color: #111827;
+  font-weight: 600;
+}
+
+.dash-switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.dash-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.dash-slider {
+  position: absolute;
+  inset: 0;
+  background: #d8dbe2;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+.dash-slider::before {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  top: 3px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 0.18s;
+}
+
+.dash-switch input:checked + .dash-slider {
+  background: #16a34a;
+}
+
+.dash-switch input:checked + .dash-slider::before {
+  transform: translateX(18px);
+}
+
+/* ===== Button ===== */
+.dash-footer {
+  padding-top: 22px;
+}
+
+.dash-button {
+  width: 100%;
+  padding: 11px;
+  border: none;
+  border-radius: 8px;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.dash-button:hover {
+  background: #14833c;
+}
+
+.dash-button:active {
+  background: #116e33;
+}
+
+.dash-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

@@ -1,0 +1,262 @@
+.cl-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #f0f7f2 0%, #e8f1ec 100%);
+  padding: 24px 16px;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+.cl-center {
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+}
+.cl-sub {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
+}
+.cl-spin {
+  animation: clspin 1s linear infinite;
+}
+@keyframes clspin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cl-card {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border-radius: 22px;
+  padding: 26px;
+  box-shadow:
+    0 18px 50px rgba(22, 163, 74, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cl-confirm {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  border-radius: 16px;
+  padding: 16px 18px;
+  color: #fff;
+}
+.cl-confirm span {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  opacity: 0.85;
+}
+.cl-confirm h1 {
+  margin: 3px 0 2px;
+  font-size: 18px;
+}
+.cl-confirm p {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  opacity: 0.9;
+}
+
+.cl-steps {
+  display: flex;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.cl-step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #f3f4f6;
+  border-radius: 999px;
+  padding: 7px 6px;
+  font-size: 11.5px;
+  color: #9ca3af;
+  font-weight: 700;
+}
+.cl-step-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+}
+.cl-step.active {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+.cl-step.active .cl-step-dot {
+  background: #16a34a;
+  color: #fff;
+}
+.cl-step.done {
+  color: #16a34a;
+}
+.cl-step.done .cl-step-dot {
+  background: #dcfce7;
+  color: #16a34a;
+}
+.cl-step-label {
+  white-space: nowrap;
+}
+
+.cl-card label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+.cl-card label small {
+  font-weight: 400;
+  color: #9ca3af;
+}
+.cl-req {
+  color: #dc2626;
+}
+
+.cl-card input,
+.cl-card select {
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14.5px;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+  background: #fafafa;
+}
+.cl-card input:focus,
+.cl-card select:focus {
+  border-color: #16a34a;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+}
+.cl-card input[type="file"] {
+  padding: 9px;
+  font-size: 13px;
+}
+
+.cl-otp {
+  letter-spacing: 0.5em;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.cl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 12px;
+  padding: 13px 20px;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #f3f4f6;
+  color: #374151;
+  transition:
+    background 0.15s,
+    transform 0.1s;
+}
+.cl-btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+.cl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.cl-primary {
+  background: #16a34a;
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(22, 163, 74, 0.25);
+}
+.cl-primary:not(:disabled):hover {
+  background: #15803d;
+}
+
+.cl-link {
+  background: none;
+  border: none;
+  color: #16a34a;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 2px 0;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cl-info {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 13.5px;
+  color: #14532d;
+  line-height: 1.5;
+  margin: 0;
+}
+.cl-warn {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 13.5px;
+  color: #78350f;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+}
+.cl-ok {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #16a34a;
+  font-weight: 700;
+  margin: 0;
+}
+.cl-alert {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-size: 13px;
+  color: #dc2626;
+}
+
+@media (max-width: 480px) {
+  .cl-card {
+    padding: 20px 16px;
+  }
+  .cl-step-label {
+    display: none;
+  }
+  .cl-step {
+    justify-content: center;
+  }
+}

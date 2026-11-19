@@ -1,0 +1,169 @@
+.adm-card {
+  display: flex;
+  gap: 24px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.adm-card-info {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.adm-card-info h2 {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  color: #14213d;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adm-card-info dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+}
+
+.adm-card-info dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.adm-card-info dd {
+  margin: 2px 0 0;
+  font-size: 0.92rem;
+  color: #1f2937;
+  word-break: break-word;
+}
+
+.adm-card-docs {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.adm-card-docs a {
+  display: block;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.adm-card-docs img {
+  display: block;
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.adm-card-docs a:hover img {
+  transform: scale(1.05);
+}
+
+.adm-card-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  min-width: 120px;
+}
+
+.adm-approve,
+.adm-reject {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 22px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.adm-approve {
+  background: #16a34a;
+  color: #fff;
+}
+
+.adm-reject {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.adm-approve:hover,
+.adm-reject:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.adm-approve:disabled,
+.adm-reject:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (max-width: 640px) {
+  .adm-card {
+    flex-direction: column;
+  }
+
+  .adm-card-actions {
+    flex-direction: row;
+  }
+
+  .adm-card-docs img {
+    width: 110px;
+    height: 110px;
+  }
+}
+.adm-ref {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin: 0 0 14px;
+}
+
+.adm-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.adm-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.adm-badge.claimed,
+.adm-badge.approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.adm-badge.unclaimed {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.adm-badge.rejected {
+  background: #fee2e2;
+  color: #b91c1c;
+}

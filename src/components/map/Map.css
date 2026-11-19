@@ -1,0 +1,7 @@
+.map {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh; /* mobile: follows the real visible height */
+  background: #e8edf2;
+  font-family: inherit;
+}

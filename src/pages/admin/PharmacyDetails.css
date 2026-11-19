@@ -1,0 +1,90 @@
+.adm-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.adm-back {
+  display: inline-block;
+  margin-bottom: 16px;
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.adm-back:hover {
+  color: #14213d;
+}
+
+.adm-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.adm-detail-head h1 {
+  font-size: 1.5rem;
+  color: #14213d;
+  margin: 0;
+}
+
+.adm-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.adm-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.adm-badge.claimed,
+.adm-badge.approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.adm-badge.unclaimed {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.adm-badge.rejected {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.adm-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+.adm-loading,
+.adm-empty {
+  text-align: center;
+  color: #6b7280;
+  padding: 60px 0;
+}
+
+.adm-sub {
+  font-size: 1.1rem;
+  color: #14213d;
+  margin: 0 0 12px;
+}
+
+.adm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
