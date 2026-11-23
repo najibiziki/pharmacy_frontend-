@@ -6,6 +6,7 @@ import useOsmPharmacies from "../../hooks/useOsmPharmacies";
 import PharmacyMarker from "./PharmacyMarker";
 import LocationButton from "./LocationButton";
 import LoginButton from "./LoginButton";
+import LogoutButton from "./LogoutButton";
 import MapTopBar from "./MapTopBar";
 import OwnerToggle from "./OwnerToggle";
 import MapNotices from "./MapNotices";
@@ -55,6 +56,7 @@ function MapContent({
 
       {!myPharmacy && <LocationButton />}
       <LoginButton />
+      <LogoutButton />
     </>
   );
 }

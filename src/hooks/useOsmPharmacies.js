@@ -7,6 +7,19 @@ const pharmacyCache = new Map();
 
 const FALLBACK = { lat: 31.6295, lng: -7.9811 }; // Marrakech center
 
+// straight-line distance in meters (Haversine) — used to sort the
+// "show all" list nearest-first from the owner's own pharmacy
+function distanceMeters(lat1, lng1, lat2, lng2) {
+  const toRad = (v) => (v * Math.PI) / 180;
+  const R = 6371000;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
 // /mine returns a raw pharmacy doc — reshape it to the same shape the
 // map endpoint uses, so markers and popups work with both
 function normalizeMinePharmacy(p) {
@@ -78,7 +91,7 @@ function useOsmPharmacies() {
 
   const controllerRef = useRef(null);
 
-  // ── nearby pharmacies (visitors & clients; also used by the owner toggle) ──
+  // ── nearby pharmacies around the USER's position (visitors & clients) ──
   useEffect(() => {
     if (restoring) return;
 
@@ -166,7 +179,68 @@ function useOsmPharmacies() {
     };
   }, [userId, hasUser, restoring]);
 
-  // ── owners: mine only by default, or mine + nearby when toggled ──
+  // ── owners: when "show all" is ON, load pharmacies around MY pharmacy
+  //    (not around where I happen to be standing) ──
+  useEffect(() => {
+    if (!showAll) return;
+    if (!myPharmacy) return;
+    const { latitude, longitude } = myPharmacy;
+    if (latitude == null || longitude == null) return;
+
+    let active = true;
+
+    async function fetchAroundMyPharmacy() {
+      const key = `${latitude.toFixed(4)},${longitude.toFixed(4)}|${
+        userId || "guest"
+      }`;
+      const cached = pharmacyCache.get(key);
+      if (cached && Date.now() - cached.time < CACHE_TTL) {
+        if (active) setFetchedPharmacies(cached.data);
+        return;
+      }
+
+      const controller = new AbortController();
+
+      setLoading(true);
+      try {
+        const response = await api.get("/pharmacies/osm", {
+          params: { lat: latitude, lng: longitude },
+          signal: controller.signal,
+        });
+
+        const result = response.data;
+        if (!result || !result.success || !Array.isArray(result.pharmacies))
+          throw new Error("Invalid pharmacy data");
+
+        pharmacyCache.set(key, { data: result.pharmacies, time: Date.now() });
+        if (active) {
+          setFetchedPharmacies(result.pharmacies);
+          setError(null);
+        }
+      } catch (err) {
+        const aborted =
+          err?.name === "AbortError" || err?.code === "ERR_CANCELED";
+        if (!aborted && active)
+          setError(err?.message || "Something went wrong");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    fetchAroundMyPharmacy();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    showAll,
+    myPharmacy?._id,
+    myPharmacy?.latitude,
+    myPharmacy?.longitude,
+    userId,
+  ]);
+
+  // ── owners: mine only by default; toggled → mine + nearest first ──
   const pharmacies = useMemo(() => {
     if (!myPharmacy) return fetchedPharmacies;
 
@@ -176,11 +250,34 @@ function useOsmPharmacies() {
 
     if (!showAll) return [myPharmacy];
 
-    // mine + nearby, without a duplicate of mine
+    // mine + nearby, without a duplicate of mine and without
+    // pharmacies that have no coordinates (they can't be placed)
     const others = fetchedPharmacies.filter(
       (p) =>
-        !p._id || !myPharmacy._id || String(p._id) !== String(myPharmacy._id),
+        (!p._id ||
+          !myPharmacy._id ||
+          String(p._id) !== String(myPharmacy._id)) &&
+        p.latitude != null &&
+        p.longitude != null,
     );
+
+    // nearest to MY pharmacy first
+    others.sort(
+      (a, b) =>
+        distanceMeters(
+          myPharmacy.latitude,
+          myPharmacy.longitude,
+          a.latitude,
+          a.longitude,
+        ) -
+        distanceMeters(
+          myPharmacy.latitude,
+          myPharmacy.longitude,
+          b.latitude,
+          b.longitude,
+        ),
+    );
+
     return [myPharmacy, ...others];
   }, [fetchedPharmacies, myPharmacy, showAll]);
 
