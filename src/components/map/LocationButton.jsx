@@ -1,57 +1,208 @@
-import { useEffect } from "react";
-import { useMap, Marker, Circle } from "react-leaflet";
+import { useEffect, useRef, useState } from "react";
+import { useMap, useMapEvents, Circle, Marker } from "react-leaflet";
 import L from "leaflet";
-import { MapPin, LocateFixed } from "lucide-react";
+import { LocateFixed } from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
-import useUserLocation from "../../hooks/useUserLocation";
 import "./LocationButton.css";
 
-const locationIcon = L.divIcon({
-  className: "user-location-marker",
+const LS_VIEW_KEY = "pharmacy:lastView"; // camera center + zoom
+const LS_FIX_KEY = "pharmacy:lastFix"; // last real GPS fix (the hook reads this too)
+
+const BAD_FIX = 2000; // m — don't follow/center on fixes worse than this
+const MAX_FIX_AGE = 6 * 60 * 60 * 1000; // ignore saved positions older than 6h
+const PAN_THRESHOLD = 25; // m — minimum movement before re-panning
+
+function readJSON(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed.lat !== "number" ||
+      typeof parsed.lng !== "number"
+    ) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeJSON(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* storage blocked (private mode) — ignore */
+  }
+}
+
+function distanceMeters(lat1, lng1, lat2, lng2) {
+  const toRad = (v) => (v * Math.PI) / 180;
+  const R = 6371000;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// pulsing blue dot — Google Maps style
+const DOT_ICON = L.divIcon({
+  className: "live-dot-icon",
   html: renderToStaticMarkup(
-    <MapPin
-      size={40}
-      color="#dc2626"
-      fill="#dc2626"
-      strokeWidth={2}
-      style={{
-        filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.35))",
-      }}
-    />,
+    <div className="live-dot">
+      <span className="live-dot-pulse" />
+    </div>,
   ),
-  iconSize: [40, 40],
-  iconAnchor: [20, 38],
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
 });
 
 function LocationButton() {
   const map = useMap();
-  const { location, loading, error, detectLocation } = useUserLocation();
+  const [fix, setFix] = useState(null); // {lat, lng, accuracy}
+  const [following, setFollowing] = useState(false);
+  const [locating, setLocating] = useState(true);
+  const [error, setError] = useState(null);
+
+  const followRef = useRef(false);
+  const lastPanRef = useRef(null);
 
   useEffect(() => {
-    if (location) {
-      map.flyTo([location.latitude, location.longitude], 16);
+    followRef.current = following;
+  }, [following]);
+
+  // restore last camera view instantly — fixes "gone after refresh"
+  useEffect(() => {
+    const saved = readJSON(LS_VIEW_KEY);
+    if (saved && Date.now() - (saved.t || 0) < MAX_FIX_AGE) {
+      map.setView([saved.lat, saved.lng], saved.zoom || 15);
     }
-  }, [location, map]);
+    // show the blue dot from the last known fix right away, no waiting
+    const savedFix = readJSON(LS_FIX_KEY);
+    if (savedFix && Date.now() - (savedFix.t || 0) < MAX_FIX_AGE) {
+      setFix({
+        lat: savedFix.lat,
+        lng: savedFix.lng,
+        accuracy: savedFix.accuracy,
+      });
+    }
+  }, [map]);
+
+  // user grabbed the map → stop following (Google Maps behavior)
+  useMapEvents({
+    dragstart() {
+      setFollowing(false);
+    },
+    moveend() {
+      const center = map.getCenter();
+      writeJSON(LS_VIEW_KEY, {
+        lat: center.lat,
+        lng: center.lng,
+        zoom: map.getZoom(),
+        t: Date.now(),
+      });
+    },
+  });
+
+  // live GPS — keeps running so the map follows you while driving
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocating(false);
+      setError("Your browser doesn't support geolocation.");
+      return;
+    }
+
+    let firstFix = true;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        const next = { lat: latitude, lng: longitude, accuracy };
+        setFix(next);
+        writeJSON(LS_FIX_KEY, { ...next, t: Date.now() });
+        // the pharmacy hook listens for this to refetch when you move
+        window.dispatchEvent(
+          new CustomEvent("live-fix", {
+            detail: { lat: latitude, lng: longitude },
+          }),
+        );
+        setLocating(false);
+
+        if ((accuracy ?? 0) > BAD_FIX) {
+          setError(
+            `Location is imprecise (±${Math.round(
+              accuracy,
+            )}m) — your PC has no GPS. Try on your phone.`,
+          );
+        } else {
+          setError(null);
+        }
+
+        if (firstFix) {
+          firstFix = false;
+          setFollowing(true);
+          lastPanRef.current = { lat: latitude, lng: longitude };
+          map.flyTo([latitude, longitude], 16, { duration: 1.2 });
+          return;
+        }
+
+        if (followRef.current && (accuracy ?? 0) <= BAD_FIX) {
+          const last = lastPanRef.current;
+          if (
+            !last ||
+            distanceMeters(last.lat, last.lng, latitude, longitude) >
+              PAN_THRESHOLD
+          ) {
+            lastPanRef.current = { lat: latitude, lng: longitude };
+            map.panTo([latitude, longitude], { animate: true, duration: 0.8 });
+          }
+        }
+      },
+      () => {
+        setLocating(false);
+        setError(
+          "Couldn't get your location. Make sure location is allowed for this site.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 },
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [map]);
+
+  function handleLocateClick() {
+    setFollowing(true);
+    if (fix) {
+      lastPanRef.current = { lat: fix.lat, lng: fix.lng };
+      map.flyTo([fix.lat, fix.lng], Math.max(map.getZoom(), 16), {
+        duration: 1.0,
+      });
+    }
+  }
 
   return (
     <>
-      {location && (
+      {fix && (fix.accuracy ?? 0) <= BAD_FIX && (
         <>
           <Circle
-            center={[location.latitude, location.longitude]}
-            radius={location.accuracy || 30}
+            center={[fix.lat, fix.lng]}
+            radius={fix.accuracy}
+            interactive={false}
             pathOptions={{
-              color: "#dc2626",
-              fillColor: "#ef4444",
-              fillOpacity: 0.1,
+              color: "#1d4ed8",
               weight: 1,
+              fillColor: "#1d4ed8",
+              fillOpacity: 0.12,
             }}
           />
-
           <Marker
-            position={[location.latitude, location.longitude]}
-            icon={locationIcon}
-            title="Your location"
+            position={[fix.lat, fix.lng]}
+            icon={DOT_ICON}
+            interactive={false}
             zIndexOffset={1000}
           />
         </>
@@ -60,12 +211,12 @@ function LocationButton() {
       <div className="location-control">
         <button
           type="button"
-          onClick={detectLocation}
-          disabled={loading}
+          onClick={handleLocateClick}
+          disabled={locating}
           aria-label="Find my location"
           title="Find my location"
         >
-          {loading ? "…" : <LocateFixed size={22} strokeWidth={2.4} />}
+          {locating ? "…" : <LocateFixed size={22} strokeWidth={2.4} />}
         </button>
 
         {error && <p className="location-error">{error}</p>}

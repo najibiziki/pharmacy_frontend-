@@ -7,8 +7,10 @@ const pharmacyCache = new Map();
 
 const FALLBACK = { lat: 31.6295, lng: -7.9811 }; // Marrakech center
 
-// straight-line distance in meters (Haversine) — used to sort the
-// "show all" list nearest-first from the owner's own pharmacy
+// owners see distances for the 10 nearest pharmacies only
+const MAX_OWNER_DISTANCES = 10;
+
+// straight-line distance in meters (Haversine)
 function distanceMeters(lat1, lng1, lat2, lng2) {
   const toRad = (v) => (v * Math.PI) / 180;
   const R = 6371000;
@@ -60,6 +62,8 @@ function useOsmPharmacies() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
+  // the position we actually used for the visitor fetch (null = no real fix)
+  const [userCenter, setUserCenter] = useState(null);
 
   const userId = user?._id || user?.id || null;
   const hasUser = !!user;
@@ -158,15 +162,21 @@ function useOsmPharmacies() {
     }
 
     if (!navigator.geolocation) {
+      setUserCenter(null);
       fetchPharmacies(FALLBACK.lat, FALLBACK.lng, true);
     } else {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           if (!active) return;
+          setUserCenter({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
           fetchPharmacies(position.coords.latitude, position.coords.longitude);
         },
         () => {
           if (!active) return;
+          setUserCenter(null);
           fetchPharmacies(FALLBACK.lat, FALLBACK.lng, true);
         },
         { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
@@ -179,8 +189,7 @@ function useOsmPharmacies() {
     };
   }, [userId, hasUser, restoring]);
 
-  // ── owners: when "show all" is ON, load pharmacies around MY pharmacy
-  //    (not around where I happen to be standing) ──
+  // ── owners: when "show all" is ON, load pharmacies around MY pharmacy ──
   useEffect(() => {
     if (!showAll) return;
     if (!myPharmacy) return;
@@ -240,9 +249,26 @@ function useOsmPharmacies() {
     userId,
   ]);
 
-  // ── owners: mine only by default; toggled → mine + nearest first ──
+  // ── attach distances + owner ordering ──
   const pharmacies = useMemo(() => {
-    if (!myPharmacy) return fetchedPharmacies;
+    // visitor / client: distance from MY position
+    if (!myPharmacy) {
+      if (!userCenter) return fetchedPharmacies;
+      return fetchedPharmacies.map((p) => ({
+        ...p,
+        distanceM:
+          p.latitude != null && p.longitude != null
+            ? Math.round(
+                distanceMeters(
+                  userCenter.lat,
+                  userCenter.lng,
+                  p.latitude,
+                  p.longitude,
+                ),
+              )
+            : null,
+      }));
+    }
 
     if (myPharmacy.latitude == null || myPharmacy.longitude == null) {
       return fetchedPharmacies;
@@ -278,8 +304,24 @@ function useOsmPharmacies() {
         ),
     );
 
-    return [myPharmacy, ...others];
-  }, [fetchedPharmacies, myPharmacy, showAll]);
+    // owner: distance from MY pharmacy — only for the 10 nearest
+    const withDistance = others.map((p, i) => ({
+      ...p,
+      distanceM:
+        i < MAX_OWNER_DISTANCES
+          ? Math.round(
+              distanceMeters(
+                myPharmacy.latitude,
+                myPharmacy.longitude,
+                p.latitude,
+                p.longitude,
+              ),
+            )
+          : null,
+    }));
+
+    return [myPharmacy, ...withDistance];
+  }, [fetchedPharmacies, myPharmacy, showAll, userCenter]);
 
   return {
     pharmacies,

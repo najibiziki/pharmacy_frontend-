@@ -53,16 +53,61 @@
 .location-error {
   max-width: 220px;
   margin: 10px 0 0;
-  padding: 8px 10px;
-  background: white;
-  border-radius: 8px;
-  font-size: 13px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #b91c1c;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
 
-.user-location-marker {
+/* ---------- live blue dot (Google Maps style) ---------- */
+.live-dot-icon {
   background: transparent;
   border: none;
+}
+
+.live-dot {
+  position: relative;
+  width: 18px;
+  height: 18px;
+}
+
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  background: #2563eb;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+}
+
+.live-dot-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.35);
+  animation: live-dot-ping 2s ease-out infinite;
+}
+
+@keyframes live-dot-ping {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  70% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
 }
 
 /* ---------- phones (≤640px) ---------- */
@@ -92,6 +137,9 @@
     animation: none;
     transition: none;
   }
+  .live-dot-pulse {
+    animation: none;
+  }
 }
 
 @keyframes location-btn-in {
@@ -103,17 +151,4 @@
     opacity: 1;
     transform: translateY(0);
   }
-}
-.location-error {
-  max-width: 220px;
-  margin: 10px 0 0;
-  padding: 10px 12px;
-  background: #fff;
-  border: 1px solid #fecaca;
-  border-radius: 12px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: #b91c1c;
-  text-align: center;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }

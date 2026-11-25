@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Popup } from "react-leaflet";
 import {
   MapPin,
+  Navigation,
   Clock3,
   MessageCircle,
   ArrowUpRight,
@@ -24,6 +25,14 @@ const SCHEDULE_HOURS = {
   garde: { open: "20:00", close: "08:00" }, // night duty, crosses midnight
   dayGarde: { open: "08:30", close: "20:00" }, // day duty
 };
+
+// 350 → "350 m", 1250 → "1.3 km" — pharmacy.distanceM comes from the hook
+function formatDistance(meters) {
+  if (meters == null || !Number.isFinite(meters)) return null;
+  if (meters < 1000) return `${meters} m`;
+  const km = meters / 1000;
+  return `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
+}
 
 function timeToMinutes(value) {
   const match = String(value ?? "").match(/^(\d{1,2}):(\d{2})$/);
@@ -192,6 +201,8 @@ function PharmacyPopup({ pharmacy }) {
   const frenchName = pharmacy.nameFr || pharmacy.name_fr || pharmacy.name;
   const displayName = arabicName || frenchName || "Pharmacy";
 
+  const distanceText = formatDistance(pharmacy.distanceM);
+
   // owner's schedule mode — switchable right here in the popup
   const [scheduleType, setScheduleType] = useState(
     pharmacy.scheduleType || "normal",
@@ -333,6 +344,20 @@ function PharmacyPopup({ pharmacy }) {
               </span>
             </div>
           </div>
+
+          {distanceText && (
+            <div className="pharmacy-card-detail">
+              <span className="pharmacy-card-detail-icon">
+                <Navigation size={16} />
+              </span>
+              <div className="pharmacy-card-detail-content">
+                <span className="pharmacy-card-detail-label">DISTANCE</span>
+                <span className="pharmacy-card-detail-value">
+                  {distanceText}
+                </span>
+              </div>
+            </div>
+          )}
 
           {hoursDisplay && (
             <div className="pharmacy-card-detail">
