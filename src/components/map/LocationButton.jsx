@@ -11,8 +11,11 @@ const LS_FIX_KEY = "pharmacy:lastFix"; // last real GPS fix (the hook reads this
 const BAD_FIX = 2000; // m — don't follow/center on fixes worse than this
 const MAX_FIX_AGE = 6 * 60 * 60 * 1000; // ignore saved positions older than 6h
 const PAN_THRESHOLD = 25; // m — minimum movement before re-panning
+const GPS_SAFETY_MS = 10000; // never wait longer than this for a first GPS answer
 
 const MSG_LOCATION_OFF = "Location is off — allow it in your phone settings";
+const MSG_NO_SIGNAL =
+  "No GPS signal yet — check that location is on, then tap the button";
 
 function readJSON(key) {
   try {
@@ -161,9 +164,22 @@ function LocationButton({ onMessage }) {
     }
 
     let firstFix = true;
+    let settled = false;
+
+    // SAFETY NET — in an installed PWA some phones never answer the GPS
+    // call at all. Without this the button stays disabled ("…") forever
+    // with no message and no dialog. 10s max, then we free the button.
+    const safetyTimer = setTimeout(() => {
+      if (!settled) {
+        setLocating(false);
+        report(MSG_NO_SIGNAL);
+      }
+    }, GPS_SAFETY_MS);
 
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
+        settled = true;
+        clearTimeout(safetyTimer);
         const { latitude, longitude, accuracy } = position.coords;
         const next = { lat: latitude, lng: longitude, accuracy };
         setFix(next);
@@ -198,6 +214,8 @@ function LocationButton({ onMessage }) {
         }
       },
       (err) => {
+        settled = true;
+        clearTimeout(safetyTimer);
         setLocating(false);
         // PERMISSION_DENIED (code 1) → the single message for this problem.
         // Codes 2/3 (signal lost / timeout) stay silent — no spam.
@@ -208,7 +226,10 @@ function LocationButton({ onMessage }) {
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 },
     );
 
-    return () => navigator.geolocation.clearWatch(watchId);
+    return () => {
+      clearTimeout(safetyTimer);
+      navigator.geolocation.clearWatch(watchId);
+    };
   }, [map, attempt]);
 
   function handleLocateClick() {
