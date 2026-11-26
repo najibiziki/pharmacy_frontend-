@@ -12,10 +12,12 @@ const BAD_FIX = 2000; // m — don't follow/center on fixes worse than this
 const MAX_FIX_AGE = 6 * 60 * 60 * 1000; // ignore saved positions older than 6h
 const PAN_THRESHOLD = 25; // m — minimum movement before re-panning
 const GPS_SAFETY_MS = 10000; // never wait longer than this for a first GPS answer
+const PERM_POLL_MS = 2000; // how often we re-check the permission ourselves
 
-const MSG_LOCATION_OFF = "Location is off — allow it in your phone settings";
+const MSG_LOCATION_OFF =
+  "Location is off — turn it on and pharmacies near you load by themselves";
 const MSG_NO_SIGNAL =
-  "No GPS signal yet — check that location is on, then tap the button";
+  "No GPS signal yet — tap the button again, ideally outdoors";
 
 function readJSON(key) {
   try {
@@ -107,34 +109,46 @@ function LocationButton({ onMessage }) {
     }
   }, [map]);
 
-  // permission probe — one pill when location is refused, and the
-  // moment the user enables location we clear it and start tracking
+  // SELF-RECOVERY — we do NOT trust permissions.onchange (it never fires
+  // inside installed PWAs). We ask the permission state ourselves every
+  // 2 seconds and every time the app comes back to the foreground.
+  // The moment location flips to allowed: clear the pill and restart GPS.
   useEffect(() => {
     if (!navigator.permissions?.query) return undefined;
 
-    let status = null;
+    let stopped = false;
+    const wasDenied = { current: false };
 
-    navigator.permissions
-      .query({ name: "geolocation" })
-      .then((s) => {
-        status = s;
+    async function check() {
+      if (stopped) return;
+      try {
+        const s = await navigator.permissions.query({ name: "geolocation" });
+        if (stopped) return;
         if (s.state === "denied") {
+          wasDenied.current = true;
           setLocating(false);
           report(MSG_LOCATION_OFF);
+        } else if (s.state === "granted" && wasDenied.current) {
+          wasDenied.current = false;
+          report(null); // clear the pill
+          setAttempt((a) => a + 1); // restart GPS → dot + pharmacies
         }
-        s.onchange = () => {
-          if (s.state === "granted") {
-            report(null); // clear the pill
-            setAttempt((a) => a + 1); // restart GPS → tracking starts
-          }
-        };
-      })
-      .catch(() => {
-        /* Permissions API not supported — the watch errors handle it */
-      });
+      } catch {
+        /* permission API can't answer here — the button tap handles retry */
+      }
+    }
+
+    const timer = setInterval(check, PERM_POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") check();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    check();
 
     return () => {
-      if (status) status.onchange = null;
+      stopped = true;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -166,9 +180,8 @@ function LocationButton({ onMessage }) {
     let firstFix = true;
     let settled = false;
 
-    // SAFETY NET — in an installed PWA some phones never answer the GPS
-    // call at all. Without this the button stays disabled ("…") forever
-    // with no message and no dialog. 10s max, then we free the button.
+    // SAFETY NET — never leave the button disabled waiting for an
+    // answer that never comes.
     const safetyTimer = setTimeout(() => {
       if (!settled) {
         setLocating(false);
