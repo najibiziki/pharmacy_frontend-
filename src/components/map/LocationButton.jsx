@@ -61,19 +61,27 @@ const DOT_ICON = L.divIcon({
   iconAnchor: [9, 9],
 });
 
-function LocationButton() {
+function LocationButton({ onMessage }) {
   const map = useMap();
   const [fix, setFix] = useState(null); // {lat, lng, accuracy}
   const [following, setFollowing] = useState(false);
   const [locating, setLocating] = useState(true);
-  const [error, setError] = useState(null);
 
   const followRef = useRef(false);
   const lastPanRef = useRef(null);
+  const lastMessageRef = useRef(null);
 
   useEffect(() => {
     followRef.current = following;
   }, [following]);
+
+  // report through the GLOBAL channel (Map.jsx → MapNotices) —
+  // never render our own notification. null clears the current one.
+  function report(message) {
+    if (message === lastMessageRef.current) return;
+    lastMessageRef.current = message;
+    onMessage?.(message);
+  }
 
   // restore last camera view instantly — fixes "gone after refresh"
   useEffect(() => {
@@ -112,7 +120,7 @@ function LocationButton() {
   useEffect(() => {
     if (!navigator.geolocation) {
       setLocating(false);
-      setError("Your browser doesn't support geolocation.");
+      report("Your browser doesn't support geolocation");
       return;
     }
 
@@ -133,13 +141,9 @@ function LocationButton() {
         setLocating(false);
 
         if ((accuracy ?? 0) > BAD_FIX) {
-          setError(
-            `Location is imprecise (±${Math.round(
-              accuracy,
-            )}m) — your PC has no GPS. Try on your phone.`,
-          );
+          report("No GPS on PC — open the app on your phone");
         } else {
-          setError(null);
+          report(null); // good fix — clear any location message
         }
 
         if (firstFix) {
@@ -164,9 +168,7 @@ function LocationButton() {
       },
       () => {
         setLocating(false);
-        setError(
-          "Couldn't get your location. Make sure location is allowed for this site.",
-        );
+        report("Allow location access to find you");
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 },
     );
@@ -218,8 +220,6 @@ function LocationButton() {
         >
           {locating ? "…" : <LocateFixed size={22} strokeWidth={2.4} />}
         </button>
-
-        {error && <p className="location-error">{error}</p>}
       </div>
     </>
   );

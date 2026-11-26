@@ -50,20 +50,6 @@
   transform: none;
 }
 
-.location-error {
-  max-width: 220px;
-  margin: 10px 0 0;
-  padding: 10px 12px;
-  background: #fff;
-  border: 1px solid #fecaca;
-  border-radius: 12px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: #b91c1c;
-  text-align: center;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-}
-
 /* ---------- live blue dot (Google Maps style) ---------- */
 .live-dot-icon {
   background: transparent;
@@ -115,10 +101,6 @@
   .location-control {
     right: 14px;
     bottom: calc(90px + env(safe-area-inset-bottom));
-  }
-  .location-error {
-    max-width: 200px;
-    font-size: 12px;
   }
 }
 

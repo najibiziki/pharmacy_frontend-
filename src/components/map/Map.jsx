@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -37,6 +37,7 @@ function MapContent({
   error,
   showAll,
   onToggleShowAll,
+  onLocationMessage,
 }) {
   return (
     <>
@@ -54,7 +55,7 @@ function MapContent({
           <OwnerToggle showAll={showAll} onToggle={onToggleShowAll} />
         )}
 
-      {!myPharmacy && <LocationButton />}
+      {!myPharmacy && <LocationButton onMessage={onLocationMessage} />}
       <LoginButton />
       <LogoutButton />
     </>
@@ -71,6 +72,17 @@ function Map() {
     loading,
     error,
   } = useOsmPharmacies();
+
+  // ONE global notification channel — LocationButton reports here,
+  // MapNotices renders everything. No child renders its own toasts.
+  const [locationMessage, setLocationMessage] = useState(null);
+
+  // every message shows once, then clears itself
+  useEffect(() => {
+    if (!locationMessage) return;
+    const timer = setTimeout(() => setLocationMessage(null), 6000);
+    return () => clearTimeout(timer);
+  }, [locationMessage]);
 
   const handleToggleShowAll = useCallback(() => {
     setShowAll((v) => !v);
@@ -93,11 +105,12 @@ function Map() {
       <MapContent
         pharmacies={pharmacies}
         myPharmacy={myPharmacy}
-        notice={notice}
+        notice={locationMessage || notice}
         loading={loading}
         error={error}
         showAll={showAll}
         onToggleShowAll={handleToggleShowAll}
+        onLocationMessage={setLocationMessage}
       />
     </MapContainer>
   );
