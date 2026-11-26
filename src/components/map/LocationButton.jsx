@@ -12,6 +12,8 @@ const BAD_FIX = 2000; // m — don't follow/center on fixes worse than this
 const MAX_FIX_AGE = 6 * 60 * 60 * 1000; // ignore saved positions older than 6h
 const PAN_THRESHOLD = 25; // m — minimum movement before re-panning
 
+const MSG_LOCATION_OFF = "Location is off — allow it in your phone settings";
+
 function readJSON(key) {
   try {
     const raw = localStorage.getItem(key);
@@ -66,6 +68,8 @@ function LocationButton({ onMessage }) {
   const [fix, setFix] = useState(null); // {lat, lng, accuracy}
   const [following, setFollowing] = useState(false);
   const [locating, setLocating] = useState(true);
+  // bump to restart GPS tracking (after permission granted / button tap)
+  const [attempt, setAttempt] = useState(0);
 
   const followRef = useRef(false);
   const lastPanRef = useRef(null);
@@ -100,6 +104,38 @@ function LocationButton({ onMessage }) {
     }
   }, [map]);
 
+  // permission probe — one pill when location is refused, and the
+  // moment the user enables location we clear it and start tracking
+  useEffect(() => {
+    if (!navigator.permissions?.query) return undefined;
+
+    let status = null;
+
+    navigator.permissions
+      .query({ name: "geolocation" })
+      .then((s) => {
+        status = s;
+        if (s.state === "denied") {
+          setLocating(false);
+          report(MSG_LOCATION_OFF);
+        }
+        s.onchange = () => {
+          if (s.state === "granted") {
+            report(null); // clear the pill
+            setAttempt((a) => a + 1); // restart GPS → tracking starts
+          }
+        };
+      })
+      .catch(() => {
+        /* Permissions API not supported — the watch errors handle it */
+      });
+
+    return () => {
+      if (status) status.onchange = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // user grabbed the map → stop following (Google Maps behavior)
   useMapEvents({
     dragstart() {
@@ -116,7 +152,7 @@ function LocationButton({ onMessage }) {
     },
   });
 
-  // live GPS — keeps running so the map follows you while driving
+  // live GPS — restarts whenever `attempt` changes
   useEffect(() => {
     if (!navigator.geolocation) {
       setLocating(false);
@@ -139,12 +175,7 @@ function LocationButton({ onMessage }) {
           }),
         );
         setLocating(false);
-
-        if ((accuracy ?? 0) > BAD_FIX) {
-          report("No GPS on PC — open the app on your phone");
-        } else {
-          report(null); // good fix — clear any location message
-        }
+        report(null); // any location complaint is now resolved
 
         if (firstFix) {
           firstFix = false;
@@ -166,18 +197,24 @@ function LocationButton({ onMessage }) {
           }
         }
       },
-      () => {
+      (err) => {
         setLocating(false);
-        report("Allow location access to find you");
+        // PERMISSION_DENIED (code 1) → the single message for this problem.
+        // Codes 2/3 (signal lost / timeout) stay silent — no spam.
+        if (err?.code === 1) {
+          report(MSG_LOCATION_OFF);
+        }
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 },
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [map]);
+  }, [map, attempt]);
 
   function handleLocateClick() {
     setFollowing(true);
+    // retry GPS — if permission is undecided this pops the native dialog
+    setAttempt((a) => a + 1);
     if (fix) {
       lastPanRef.current = { lat: fix.lat, lng: fix.lng };
       map.flyTo([fix.lat, fix.lng], Math.max(map.getZoom(), 16), {
