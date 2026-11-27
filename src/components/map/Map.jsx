@@ -93,6 +93,7 @@ function Map() {
       center={FALLBACK_CENTER}
       zoom={FALLBACK_ZOOM}
       zoomControl={false}
+      attributionControl={false}
       className="map"
     >
       <TileLayer
