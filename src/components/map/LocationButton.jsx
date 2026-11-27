@@ -198,11 +198,17 @@ function LocationButton({ onMessage }) {
         setFix(next);
         writeJSON(LS_FIX_KEY, { ...next, t: Date.now() });
         // the pharmacy hook listens for this to refetch when you move
-        window.dispatchEvent(
-          new CustomEvent("live-fix", {
-            detail: { lat: latitude, lng: longitude },
-          }),
-        );
+        if ((accuracy ?? Infinity) <= BAD_FIX) {
+          window.dispatchEvent(
+            new CustomEvent("live-fix", {
+              detail: {
+                lat: latitude,
+                lng: longitude,
+                accuracy,
+              },
+            }),
+          );
+        }
         setLocating(false);
         report(null); // any location complaint is now resolved
 

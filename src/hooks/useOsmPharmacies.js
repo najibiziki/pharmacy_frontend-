@@ -5,8 +5,6 @@ import api from "../services/api";
 const CACHE_TTL = import.meta.env.DEV ? 10 * 1000 : 5 * 60 * 1000;
 const pharmacyCache = new Map();
 
-const FALLBACK = { lat: 31.6295, lng: -7.9811 }; // Marrakech center
-
 // owners see distances for the 10 nearest pharmacies only
 const MAX_OWNER_DISTANCES = 10;
 
@@ -59,7 +57,7 @@ function useOsmPharmacies() {
   const [fetchedPharmacies, setFetchedPharmacies] = useState([]);
   const [myPharmacy, setMyPharmacy] = useState(null);
   const [showAll, setShowAll] = useState(false); // owner default: mine only
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
   // the position we actually used for the visitor fetch (null = no real fix)
@@ -96,98 +94,115 @@ function useOsmPharmacies() {
   const controllerRef = useRef(null);
 
   // ── nearby pharmacies around the USER's position (visitors & clients) ──
+
   useEffect(() => {
     if (restoring) return;
 
     let active = true;
+    let lastRequested = null;
 
-    async function fetchPharmacies(lat, lng, fallbackUsed = false) {
+    async function fetchPharmacies(lat, lng) {
+      // Avoid repeated requests for practically the same position
+      if (
+        lastRequested &&
+        distanceMeters(lastRequested.lat, lastRequested.lng, lat, lng) < 25
+      ) {
+        return;
+      }
+
+      lastRequested = { lat, lng };
+
       const key = `${lat.toFixed(4)},${lng.toFixed(4)}|${userId || "guest"}`;
       const cached = pharmacyCache.get(key);
 
       if (cached && Date.now() - cached.time < CACHE_TTL) {
         if (active) {
+          setUserCenter({ lat, lng });
           setFetchedPharmacies(cached.data);
-          if (fallbackUsed)
-            setNotice(
-              "We couldn't use your location — showing pharmacies in Marrakech.",
-            );
+          setError(null);
+          setNotice(null);
+          setLoading(false);
         }
-        setLoading(false);
         return;
       }
 
       controllerRef.current?.abort();
+
       const controller = new AbortController();
       controllerRef.current = controller;
 
-      let chained = false;
+      setLoading(true);
+      setError(null);
+      setNotice(null);
 
       try {
         const response = await api.get("/pharmacies/osm", {
-          params: { lat, lng },
+          params: {
+            lat,
+            lng,
+            limit: 10,
+          },
           signal: controller.signal,
         });
 
         const result = response.data;
-        if (!result || !result.success || !Array.isArray(result.pharmacies))
-          throw new Error("Invalid pharmacy data");
 
-        if (!fallbackUsed && result.pharmacies.length === 0) {
-          chained = true;
-          fetchPharmacies(FALLBACK.lat, FALLBACK.lng, true);
-          return;
+        if (!result || !result.success || !Array.isArray(result.pharmacies)) {
+          throw new Error("Invalid pharmacy data");
         }
 
-        if (active) {
-          pharmacyCache.set(key, { data: result.pharmacies, time: Date.now() });
+        if (active && controllerRef.current === controller) {
+          pharmacyCache.set(key, {
+            data: result.pharmacies,
+            time: Date.now(),
+          });
+
+          setUserCenter({ lat, lng });
           setFetchedPharmacies(result.pharmacies);
           setError(null);
-          if (fallbackUsed)
-            setNotice(
-              "We couldn't use your location — showing pharmacies in Marrakech.",
-            );
         }
       } catch (err) {
         const aborted =
           err?.name === "AbortError" || err?.code === "ERR_CANCELED";
-        if (!aborted && active)
+
+        if (!aborted && active) {
           setError(err?.message || "Something went wrong");
+        }
       } finally {
-        if (active && !chained && controllerRef.current === controller) {
+        if (active && controllerRef.current === controller) {
           controllerRef.current = null;
           setLoading(false);
         }
       }
     }
 
-    if (!navigator.geolocation) {
-      setUserCenter(null);
-      fetchPharmacies(FALLBACK.lat, FALLBACK.lng, true);
-    } else {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          if (!active) return;
-          setUserCenter({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-          fetchPharmacies(position.coords.latitude, position.coords.longitude);
-        },
-        () => {
-          if (!active) return;
-          setUserCenter(null);
-          fetchPharmacies(FALLBACK.lat, FALLBACK.lng, true);
-        },
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
-      );
+    // Wait for LocationButton to provide a real GPS position.
+    // No GPS fix = no pharmacy request.
+    function handleLiveFix(event) {
+      const { lat, lng, accuracy } = event.detail || {};
+
+      if (
+        typeof lat !== "number" ||
+        typeof lng !== "number" ||
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng) ||
+        (accuracy ?? Infinity) > 2000
+      ) {
+        return;
+      }
+
+      fetchPharmacies(lat, lng);
     }
+
+    window.addEventListener("live-fix", handleLiveFix);
 
     return () => {
       active = false;
+      window.removeEventListener("live-fix", handleLiveFix);
       controllerRef.current?.abort();
+      controllerRef.current = null;
     };
-  }, [userId, hasUser, restoring]);
+  }, [userId, restoring]);
 
   // ── owners: when "show all" is ON, load pharmacies around MY pharmacy ──
   useEffect(() => {
